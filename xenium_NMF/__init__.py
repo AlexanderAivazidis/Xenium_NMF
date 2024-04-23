@@ -10,7 +10,6 @@ from torch.distributions import biject_to, transform_to
 
 from ._programme_model import ProgrammeModel
 
-
 # https://github.com/python-poetry/poetry/pull/2366#issuecomment-652418094
 # https://github.com/python-poetry/poetry/issues/144#issuecomment-623927302
 try:
