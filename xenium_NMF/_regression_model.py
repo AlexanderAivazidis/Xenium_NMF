@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from anndata import AnnData
-from cell2fate._pyro_mixin import (
+from xenium_NMF._pyro_mixin import (
     AutoGuideMixinModule,
     PltExportMixin,
     PyroAggressiveTrainingPlan,

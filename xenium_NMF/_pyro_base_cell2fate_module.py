@@ -2,7 +2,7 @@ from scvi._compat import Literal
 from scvi.module.base import PyroBaseModuleClass
 from pyro.infer.autoguide import AutoNormal, AutoHierarchicalNormalMessenger
 
-from cell2fate._pyro_mixin import AutoGuideMixinModule, init_to_value
+from xenium_NMF._pyro_mixin import AutoGuideMixinModule, init_to_value
 
 class Cell2FateBaseModule(PyroBaseModuleClass, AutoGuideMixinModule):
     def __init__(

@@ -16,7 +16,7 @@ from pyro.nn.module import PyroModule, PyroParam, to_pyro_module_
 from scvi._compat import Literal
 from torch.distributions import biject_to, constraints
 
-from cell2fate.nn import FCLayers
+from xenium_NMF.nn import FCLayers
 
 def log_sum_exp(value, dim=None, keepdim=False):
     """Numerically stable implementation of the operation

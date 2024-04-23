@@ -13,7 +13,7 @@ from scvi.nn import one_hot
 from torch.distributions import biject_to, transform_to
 from pyro.distributions import RelaxedBernoulliStraightThrough
 RelaxedBernoulliStraightThrough.mean = property(lambda self: self.probs)
-from cell2fate.utils import G_a, G_b
+from xenium_NMF.utils import G_a, G_b
 
 class _ExpPositive(type(constraints.positive)):
     def __init__(self):
@@ -78,7 +78,6 @@ class MeanProgrammePyroModel(PyroModule):
         init_alpha=10.0,
         rna_model: bool = True,
         use_exp_positive: bool = False,
-        p_f_prior = {"alpha": 1., "beta": 9.},
         p_g_prior = {"alpha": 1., "beta": 9.},
         w_cf_prior = {"alpha": 0.3, "beta": 0.7},
     ):
@@ -128,7 +127,6 @@ class MeanProgrammePyroModel(PyroModule):
         self.g_fg_prior_alpha = g_fg_prior_alpha
         self.factor_level_prior_alpha = factor_level_prior_alpha
         self.detection_hyp_prior = detection_hyp_prior
-        self.p_f_prior = p_f_prior
         self.p_g_prior = p_g_prior
         self.w_cf_prior = w_cf_prior
 
@@ -206,15 +204,6 @@ class MeanProgrammePyroModel(PyroModule):
         )
         
         self.register_buffer(
-            "p_f_alpha",
-            torch.tensor(self.p_f_prior["alpha"]),
-        )
-        self.register_buffer(
-            "p_f_beta",
-            torch.tensor(self.p_f_prior["beta"]),
-        )
-        
-        self.register_buffer(
             "p_g_alpha",
             torch.tensor(self.p_g_prior["alpha"]),
         )
@@ -264,7 +253,6 @@ class MeanProgrammePyroModel(PyroModule):
         rna_index = tensor_dict["rna_index"].bool()
         extra_categoricals = tensor_dict[REGISTRY_KEYS.CAT_COVS_KEY]
         var_categoricals = tensor_dict["var_categoricals"].long()
-        fraction_retained = tensor_dict["fraction_retained"]
         return (
             x_data,
             ind_x,
@@ -272,8 +260,7 @@ class MeanProgrammePyroModel(PyroModule):
             label_index,
             rna_index,
             extra_categoricals,
-            var_categoricals,
-            fraction_retained
+            var_categoricals
         ), {}
 
     def create_plates(
@@ -284,8 +271,7 @@ class MeanProgrammePyroModel(PyroModule):
         label_index,
         rna_index,
         extra_categoricals,
-        var_categoricals,
-        fraction_retained
+        var_categoricals
     ):
         return pyro.plate("obs_plate", size=self.n_obs, dim=-2, subsample=idx)
 
@@ -323,11 +309,8 @@ class MeanProgrammePyroModel(PyroModule):
         label_index,
         rna_index,
         extra_categoricals,
-        var_categoricals,
-        fraction_retained
+        var_categoricals
     ):
-        
-        r = torch.mean(fraction_retained)
         
         batch_size = len(idx)
         obs2sample = one_hot(batch_index, self.n_batch)
@@ -349,8 +332,7 @@ class MeanProgrammePyroModel(PyroModule):
             label_index,
             rna_index,
             extra_categoricals,
-            var_categoricals,
-            fraction_retained
+            var_categoricals
         )
 
         def apply_plate_to_fixed(x, index):
@@ -395,16 +377,6 @@ class MeanProgrammePyroModel(PyroModule):
                 "detection_y_c",
                 dist.Beta(alpha_y, beta_y),
             )  # (self.n_obs, 1)
-
-        # ===================== Gene programmes ======================== #
-        # (set prior so that gene expression produces realistic total counts)
-#         total_mRNA = pyro.sample('total_mRNA', 
-#                                  dist.Gamma(
-#                                  G_a(self.total_mRNA_mean, self.total_mRNA_sd),
-#                                  G_b(self.total_mRNA_mean, self.total_mRNA_sd)))
-                                      
-#         self.mean_factor_level =  r * total_mRNA / (self.n_genes * self.n_factors  
-#                                           * self.w_cf_alpha / (self.w_cf_alpha + self.w_cf_beta))
         
         self.mean_factor_level = self.one
         self.factor_level_beta = self.factor_level_alpha/self.mean_factor_level

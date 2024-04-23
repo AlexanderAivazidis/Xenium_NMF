@@ -13,7 +13,7 @@ from scvi.nn import one_hot
 from torch.distributions import biject_to, transform_to
 from pyro.distributions import RelaxedBernoulliStraightThrough
 RelaxedBernoulliStraightThrough.mean = property(lambda self: self.probs)
-from cell2fate.utils import G_a, G_b
+from xenium_NMF.utils import G_a, G_b
 
 class _ExpPositive(type(constraints.positive)):
     def __init__(self):
