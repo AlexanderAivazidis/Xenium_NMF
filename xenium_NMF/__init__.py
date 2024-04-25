@@ -8,7 +8,7 @@ from pyro.distributions import constraints
 from pyro.distributions.transforms import SoftplusTransform
 from torch.distributions import biject_to, transform_to
 
-from ._programme_model import ProgrammeModel
+from .NMF_model import NMF_Model
 
 # https://github.com/python-poetry/poetry/pull/2366#issuecomment-652418094
 # https://github.com/python-poetry/poetry/issues/144#issuecomment-623927302

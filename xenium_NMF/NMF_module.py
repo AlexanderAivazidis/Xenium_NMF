@@ -23,7 +23,7 @@ exp_positive = _ExpPositive()
 def _transform_to_positive(constraint):
     return ExpTransform()
 
-class MeanProgrammePyroModel(PyroModule):
+class NMF_PyroModel(PyroModule):
     """
     Two State programme model treats RNA count data :math:`D` as Poisson distributed,
     given transcription rate :math:`\mu_{c,g}` and a range of variables accounting for technical effects:
@@ -52,7 +52,6 @@ class MeanProgrammePyroModel(PyroModule):
         n_batch,
         n_extra_categoricals,
         n_var_categoricals,
-        gene_bool: np.array,
         factor_prior={"rate": 1.0, "alpha": 1.0, "states_per_gene": 3.0},
         factor_number_prior={"factors_per_cell": 2.0, "mean_var_ratio": 1.0},
         stochastic_v_ag_hyp_prior={"alpha": 9.0, "beta": 3.0},
@@ -70,7 +69,6 @@ class MeanProgrammePyroModel(PyroModule):
         n_vars
         n_factors
         n_batch
-        gene_bool
         stochastic_v_ag_hyp_prior
         gene_add_alpha_hyp_prior
         gene_add_mean_hyp_prior
@@ -83,19 +81,11 @@ class MeanProgrammePyroModel(PyroModule):
 
         self.n_obs = n_obs
         self.n_vars = n_vars
+        self.n_genes = n_vars
         self.n_factors = n_factors
         self.n_batch = n_batch
         self.n_extra_categoricals = n_extra_categoricals
         self.n_var_categoricals = n_var_categoricals
-        
-        self.gene_bool = gene_bool.astype(int).flatten()
-        self.gene_ind = np.where(gene_bool)[0]
-        self.n_genes = len(self.gene_ind)
-        self.register_buffer("gene_ind_tt", torch.tensor(self.gene_ind))
-
-        self.region_ind = np.where(np.logical_not(gene_bool))[0]
-        self.n_regions = self.n_vars - self.n_genes
-        self.register_buffer("region_ind_tt", torch.tensor(self.region_ind))
 
         self.stochastic_v_ag_hyp_prior = stochastic_v_ag_hyp_prior
         self.gene_add_alpha_hyp_prior = gene_add_alpha_hyp_prior
@@ -191,7 +181,6 @@ class MeanProgrammePyroModel(PyroModule):
         x_data = tensor_dict['spliced']
         ind_x = tensor_dict["ind_x"].long().squeeze()
         batch_index = tensor_dict[REGISTRY_KEYS.BATCH_KEY]
-        label_index = tensor_dict[REGISTRY_KEYS.LABELS_KEY]
         rna_index = tensor_dict["rna_index"].bool()
         extra_categoricals = tensor_dict[REGISTRY_KEYS.CAT_COVS_KEY]
         var_categoricals = tensor_dict["var_categoricals"].long()
@@ -199,7 +188,6 @@ class MeanProgrammePyroModel(PyroModule):
             x_data,
             ind_x,
             batch_index,
-            label_index,
             rna_index,
             extra_categoricals,
             var_categoricals,
@@ -210,7 +198,6 @@ class MeanProgrammePyroModel(PyroModule):
         x_data,
         idx,
         batch_index,
-        label_index,
         rna_index,
         extra_categoricals,
         var_categoricals,
@@ -248,7 +235,6 @@ class MeanProgrammePyroModel(PyroModule):
         x_data,
         idx,
         batch_index,
-        label_index,
         rna_index,
         extra_categoricals,
         var_categoricals,
@@ -271,7 +257,6 @@ class MeanProgrammePyroModel(PyroModule):
             x_data,
             idx,
             batch_index,
-            label_index,
             rna_index,
             extra_categoricals,
             var_categoricals,
@@ -415,4 +400,4 @@ class MeanProgrammePyroModel(PyroModule):
                 dist.GammaPoisson(
                     concentration=stochastic_v_ag, rate=stochastic_v_ag / mu
                 ),
-                obs=x_data[:, self.gene_ind_tt],)
+                obs=x_data,)

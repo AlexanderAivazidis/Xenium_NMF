@@ -36,10 +36,10 @@ from scvi.train import PyroTrainingPlan, TrainRunner
 from scvi.utils import setup_anndata_dsp
 from scvi.nn import one_hot
 from xenium_NMF._regression_model import RegressionBaseModule
-from xenium_NMF._mean_programme_module_GammaWeights import MeanProgrammePyroModel
+from xenium_NMF.NMF_module import NMF_PyroModel
 from xenium_NMF._pyro_mixin import MyAutoHierarchicalNormalMessenger
 
-class ProgrammeModel(
+class NMF_Model(
     QuantileMixin,
     PyroSampleMixin,
     PyroSviTrainMixin,
@@ -47,7 +47,7 @@ class ProgrammeModel(
     BaseModelClass,
 ):
     """
-    Regulatory programme model.
+    Non-negative matrix factorization model.
 
     User-end model class.
 
@@ -74,7 +74,7 @@ class ProgrammeModel(
         self,
         adata: AnnData,
         model_class=None,
-        n_factors: int = 300,
+        n_factors: int = 10,
         use_moments_as_initial: bool = False,
         use_moments_as_prior: bool = False,
         gene_cluster_init: Optional[str] = None,
@@ -97,7 +97,7 @@ class ProgrammeModel(
         self.minibatch_genes_ = False
 
         if model_class is None:
-            model_class = MeanProgrammePyroModel
+            model_class = NMF_PyroModel
 
         # create factor names
         self.n_factors_ = n_factors
@@ -144,7 +144,6 @@ class ProgrammeModel(
         layer: Optional[str] = None,
         spliced_fraction_retained_key = 'spliced_fraction_retained',
         batch_key: Optional[str] = None,
-        labels_key: Optional[str] = None,
         rna_index: Optional[str] = None,
         variance_categories: Optional[str] = None,
         categorical_covariate_keys: Optional[List[str]] = None,
@@ -161,7 +160,7 @@ class ProgrammeModel(
         ----------
         %(param_adata)s
         %(param_batch_key)s
-        %(param_labels_key)s
+        %(param_key)s
         %(param_layer)s
         %(param_cat_cov_keys)s
         %(param_cont_cov_keys)s
@@ -191,7 +190,6 @@ class ProgrammeModel(
         anndata_fields = [
             LayerField('spliced', None, is_count_data=True),
             CategoricalObsField(REGISTRY_KEYS.BATCH_KEY, batch_key),
-            CategoricalObsField(REGISTRY_KEYS.LABELS_KEY, labels_key),
             CategoricalJointObsField(
                 REGISTRY_KEYS.CAT_COVS_KEY, categorical_covariate_keys
             ),
@@ -493,39 +491,6 @@ class ProgrammeModel(
             # expose variables on the list if they are hidden
             if k_in_vars and (not v.requires_grad) and (vars_status == "expose"):
                 v.requires_grad = True
-
-    def _compute_cluster_summary(self, key=REGISTRY_KEYS.LABELS_KEY, summary="mean"):
-        """
-        Compute average per cluster (key=REGISTRY_KEYS.LABELS_KEY) or per batch (key=REGISTRY_KEYS.BATCH_KEY).
-
-        Returns
-        -------
-        pd.DataFrame with variables in rows and labels in columns
-        """
-        # find cell label column
-        label_col = self.adata_manager.get_state_registry(key).original_key
-
-        # find data slot
-        x_dict = self.adata_manager.data_registry["X"]
-        if x_dict["attr_name"] == "X":
-            use_raw = False
-        else:
-            use_raw = True
-        if x_dict["attr_name"] == "layers":
-            layer = x_dict["attr_key"]
-        else:
-            layer = None
-
-        # compute mean expression of each gene in each cluster/batch
-        aver = compute_cluster_summary(
-            self.adata_manager.adata,
-            labels=label_col,
-            use_raw=use_raw,
-            layer=layer,
-            summary=summary,
-        )
-
-        return aver
 
     def export_posterior(
         self,
